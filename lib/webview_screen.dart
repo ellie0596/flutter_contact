@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 class WebViewScreen extends StatefulWidget {
   const WebViewScreen({Key? key}) : super(key: key);
@@ -9,78 +11,120 @@ class WebViewScreen extends StatefulWidget {
 }
 
 class _WebViewScreenState extends State<WebViewScreen> {
-  late InAppWebViewController _webViewController;
+  late final WebViewController _controller;
   double progress = 0;
+  String? errorMessage;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initMobileAds();
+    _initWebView();
+  }
+
+  Future<void> _initMobileAds() async {
+    await MobileAds.instance.initialize();
+  }
+
+  Future<void> _initWebView() async {
+    _controller = WebViewController()..setJavaScriptMode(JavaScriptMode.unrestricted);
+
+    // 2. Enable third-party cookies for Android.
+    if (_controller.platform is AndroidWebViewController) {
+      AndroidWebViewCookieManager cookieManager = AndroidWebViewCookieManager(const PlatformWebViewCookieManagerCreationParams());
+      await cookieManager.setAcceptThirdPartyCookies(_controller.platform as AndroidWebViewController, true);
+    }
+
+    // Register WebView with MobileAds for ad integration
+    await MobileAds.instance.registerWebView(_controller);
+
+    // Load the URL
+    await _controller.loadRequest(Uri.parse("https://google.github.io/webview-ads/test/"));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('WebView - localhost:3000'),
+        title: const Text('WebView - localhost'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios),
+            onPressed: () async {
+              if (await _controller.canGoBack()) {
+                _controller.goBack();
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.arrow_forward_ios),
+            onPressed: () async {
+              if (await _controller.canGoForward()) {
+                _controller.goForward();
+              }
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
-          InAppWebView(
-            initialUrlRequest: URLRequest(
-              url: WebUri("http://localhost:3000"),
+          WebViewWidget(controller: _controller),
+          if (isLoading && progress < 1.0)
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
             ),
-            initialSettings: InAppWebViewSettings(
-              useShouldOverrideUrlLoading: true,
-              mediaPlaybackRequiresUserGesture: false,
-              javaScriptEnabled: true,
-              // iOS specific settings for localhost
-              allowsInlineMediaPlayback: true,
-              // Android specific settings for localhost
-              mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-              domStorageEnabled: true,
-              databaseEnabled: true,
-              clearSessionCache: true,
-              clearCache: true,
-            ),
-            onWebViewCreated: (controller) {
-              _webViewController = controller;
-            },
-            onLoadStart: (controller, url) {
-              print("Started loading: $url");
-            },
-            onLoadStop: (controller, url) async {
-              print("Finished loading: $url");
-            },
-            onProgressChanged: (controller, progress) {
-              setState(() {
-                this.progress = progress / 100;
-              });
-            },
-            onReceivedError: (controller, request, error) {
-              print("Error: ${error.description}");
-              // Show error message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to load: ${error.description}'),
-                  backgroundColor: Colors.red,
+          if (errorMessage != null)
+            Container(
+              color: Colors.white,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Failed to load page',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        _controller.reload();
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
                 ),
-              );
-            },
-            onConsoleMessage: (controller, consoleMessage) {
-              print("Console message: ${consoleMessage.message}");
-            },
-          ),
-          progress < 1.0
-              ? LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: Colors.white,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                )
-              : Container(),
+              ),
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _webViewController.reload();
+          _controller.reload();
         },
-        child: const Icon(Icons.refresh),
         tooltip: 'Reload',
+        child: const Icon(Icons.refresh),
       ),
     );
   }

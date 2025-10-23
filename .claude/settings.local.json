@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(flutter pub get:*)"
+      "Bash(flutter pub get:*)",
+      "Bash(echo:*)",
+      "Read(//Users/imyeji/Documents/flutter/bin/**)",
+      "Bash(/Users/imyeji/Documents/flutter/bin/flutter pub:*)",
+      "Bash(/Users/imyeji/Documents/flutter/bin/flutter run:*)",
+      "Bash(/Users/imyeji/Documents/flutter/bin/flutter devices:*)",
+      "Bash(open:*)",
+      "Bash(/Users/imyeji/Documents/flutter/bin/flutter clean:*)",
+      "WebFetch(domain:developers.google.com)",
+      "Bash(pod install)"
     ],
     "deny": [],
     "ask": []

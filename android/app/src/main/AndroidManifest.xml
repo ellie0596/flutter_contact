@@ -37,6 +37,16 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Google Mobile Ads App ID (AdMob sample ID, replace with your own) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
+
+        <!-- Bypass APPLICATION_ID check for WebView API for Ads -->
+        <meta-data
+                android:name="com.google.android.gms.ads.INTEGRATION_MANAGER"
+                android:value="webview"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
