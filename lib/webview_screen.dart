@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 class WebViewScreen extends StatefulWidget {
   const WebViewScreen({Key? key}) : super(key: key);
@@ -28,24 +29,36 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 
   Future<void> createWebView() async {
-    controller = WebViewController();
+    // iOS에서 비디오 자동 재생을 위한 설정
+    late final PlatformWebViewControllerCreationParams params;
+    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
+      params = WebKitWebViewControllerCreationParams(
+        allowsInlineMediaPlayback: true,
+        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+      );
+    } else {
+      params = const PlatformWebViewControllerCreationParams();
+    }
+
+    controller = WebViewController.fromPlatformCreationParams(params);
 
     // 1. Enable JavaScript in the web view.
     await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
 
     // 2. Enable third-party cookies for Android.
     if (controller.platform is AndroidWebViewController) {
-      AndroidWebViewCookieManager cookieManager = AndroidWebViewCookieManager(
-          const PlatformWebViewCookieManagerCreationParams());
-      await cookieManager.setAcceptThirdPartyCookies(
-          controller.platform as AndroidWebViewController, true);
+      AndroidWebViewCookieManager cookieManager = AndroidWebViewCookieManager(const PlatformWebViewCookieManagerCreationParams());
+      await cookieManager.setAcceptThirdPartyCookies(controller.platform as AndroidWebViewController, true);
+
+      // 안드로이드에서 비디오 자동 재생을 위한 설정
+      (controller.platform as AndroidWebViewController).setMediaPlaybackRequiresUserGesture(false);
     }
 
     // 3. Register the web view.
     await MobileAds.instance.registerWebView(controller);
 
     // Load the URL
-    await controller.loadRequest(Uri.parse("https://sso.dev.adrop.io/test"));
+    await controller.loadRequest(Uri.parse('https://sso.dev.adrop.io/test'));
   }
 
   @override
