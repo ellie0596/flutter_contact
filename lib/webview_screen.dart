@@ -11,7 +11,7 @@ class WebViewScreen extends StatefulWidget {
 }
 
 class _WebViewScreenState extends State<WebViewScreen> {
-  late final WebViewController _controller;
+  late final WebViewController controller;
   double progress = 0;
   String? errorMessage;
   bool isLoading = true;
@@ -19,50 +19,55 @@ class _WebViewScreenState extends State<WebViewScreen> {
   @override
   void initState() {
     super.initState();
-    _initMobileAds();
-    _initWebView();
+    initMobileAds();
+    createWebView();
   }
 
-  Future<void> _initMobileAds() async {
+  Future<void> initMobileAds() async {
     await MobileAds.instance.initialize();
   }
 
-  Future<void> _initWebView() async {
-    _controller = WebViewController()..setJavaScriptMode(JavaScriptMode.unrestricted);
+  Future<void> createWebView() async {
+    controller = WebViewController();
+
+    // 1. Enable JavaScript in the web view.
+    await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
 
     // 2. Enable third-party cookies for Android.
-    if (_controller.platform is AndroidWebViewController) {
-      AndroidWebViewCookieManager cookieManager = AndroidWebViewCookieManager(const PlatformWebViewCookieManagerCreationParams());
-      await cookieManager.setAcceptThirdPartyCookies(_controller.platform as AndroidWebViewController, true);
+    if (controller.platform is AndroidWebViewController) {
+      AndroidWebViewCookieManager cookieManager = AndroidWebViewCookieManager(
+          const PlatformWebViewCookieManagerCreationParams());
+      await cookieManager.setAcceptThirdPartyCookies(
+          controller.platform as AndroidWebViewController, true);
     }
 
-    // Register WebView with MobileAds for ad integration
-    await MobileAds.instance.registerWebView(_controller);
+    // 3. Register the web view.
+    await MobileAds.instance.registerWebView(controller);
 
     // Load the URL
-    await _controller.loadRequest(Uri.parse("https://google.github.io/webview-ads/test/"));
+    await controller.loadRequest(Uri.parse("https://sso.dev.adrop.io/test"));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('WebView - localhost'),
+        title: const Text('WebView'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () async {
-              if (await _controller.canGoBack()) {
-                _controller.goBack();
+              if (await controller.canGoBack()) {
+                controller.goBack();
               }
             },
           ),
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios),
             onPressed: () async {
-              if (await _controller.canGoForward()) {
-                _controller.goForward();
+              if (await controller.canGoForward()) {
+                controller.goForward();
               }
             },
           ),
@@ -70,7 +75,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
       ),
       body: Stack(
         children: [
-          WebViewWidget(controller: _controller),
+          WebViewWidget(controller: controller),
           if (isLoading && progress < 1.0)
             LinearProgressIndicator(
               value: progress,
@@ -109,7 +114,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () {
-                        _controller.reload();
+                        controller.reload();
                       },
                       child: const Text('Retry'),
                     ),
@@ -121,7 +126,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _controller.reload();
+          controller.reload();
         },
         tooltip: 'Reload',
         child: const Icon(Icons.refresh),
